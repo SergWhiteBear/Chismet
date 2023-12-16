@@ -70,7 +70,7 @@ def method_hord(a: float, b: float):
     return a, n
 
 
-# Метод хорд
+# Метод подвижных хорд
 def method_movable_hord(a: float, b: float):
     n = 0
     c = b
