@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from sympy import symbols, cos, diff, maximum, S, Interval
+from sympy import symbols, cos, diff
 
 
 def f(x):
@@ -53,3 +53,13 @@ f = cos(x ** 4)
 sixth_derivative = diff(f, x, 6)
 
 print(f'\n6-я производная: {sixth_derivative}')
+
+# Вычисление максимума и погрешности
+x = 1
+max_func = 32 * x ** 2 * (
+        -128 * x ** 16 * math.cos(x ** 4) - 1440 * x ** 12 * math.sin(x ** 4) + 4200 * x ** 8 * math.cos(
+    x ** 4) + 3150 * x ** 4 * math.sin(x ** 4) - 315 * math.cos(x ** 4))
+print(
+    f'\nМаксимум на [0,1] = {max_func}')
+
+print(f'\nПогрешность |R_n[f]| <= {max_func / 720 * 1 / 2800}')
