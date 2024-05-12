@@ -54,19 +54,14 @@ def get_twostep_Adams(x, y0, h, n, f):
     return y
 
 
-# Определение функции для вычисления средней абсолютной ошибки (MAE)
-def mean_absolute_error(y_true, y_pred):
-    return np.mean(np.abs(y_true - y_pred))
-
-
-# Определение функции для вычисления среднеквадратичной ошибки (MSE)
-def mean_squared_error(y_true, y_pred):
-    return np.mean((y_true - y_pred) ** 2)
+# Функция для расчета Средней Абсолютной ошибки
+def calculate_mae(y_actual, y_calculated):
+    return np.mean(np.abs(y_actual - y_calculated))
 
 
 if __name__ == "__main__":
     arr_N = [10, 20, 30]
-
+    results = {}
     for N in arr_N:
         h = 1 / N
 
@@ -75,22 +70,47 @@ if __name__ == "__main__":
         y_Euler = get_Euler(x, -2, h, N, f)
         y_Teylor = get_second_Teylor(x, -2, h, N, f)
         y_Adams = get_twostep_Adams(x, -2, h, N, f)
-        print(mean_absolute_error(res_analytic, y_Euler))
-        print(mean_absolute_error(res_analytic, y_Adams))
-        print(mean_absolute_error(res_analytic, y_Teylor))
-
-
+        results[N] = {
+            'Точное решение': res_analytic,
+            'Эйлер': y_Euler,
+            'Тейлор': y_Teylor,
+            'Адамс': y_Adams,
+            'x': x
+        }
+        errors_Euler = calculate_mae(res_analytic, y_Euler)
+        errors_Teylor = calculate_mae(res_analytic, y_Teylor)
+        errors_Adams = calculate_mae(res_analytic, y_Adams)
+        print(f'Средняя Абсолютная ошибки для разбиения {N}')
+        print(f'Метод Эйлер явный = {errors_Euler}')
+        print(f'Метод Тейлор второго порядка = {errors_Teylor}')
+        print(f'Метод Адамс двухшаговый = {errors_Adams} \n')
         plt.figure(figsize=(18, 11))
-        plt.plot(x, y_Euler, label='Эйлер')
-        #plt.plot(x, y_Teylor, label='Тейлор')
-        #plt.plot(x, y_Adams, label='Адамс')
-        #plt.plot(x, analytic(x), label='Точное реш.', linestyle='--')  # Точное решение для сравнения
-        plt.title(f'Метод Эйлера для N={N}')
+        plt.plot(results[N]['x'], results[N]['Эйлер'], label=f'Эйлер N={N}')
+        plt.plot(results[N]['x'], results[N]['Тейлор'], label=f'Тейлор N={N}')
+        plt.plot(results[N]['x'], results[N]['Адамс'], label=f'Адамс N={N}')
+        plt.plot(results[N]['x'], results[N]['Точное решение'], label=f'Точное решение N={N}',
+                 linestyle='--')  # Точное решение для сравнения
+        plt.title(f'Сравнение методов для N={N}')
         plt.xticks(np.linspace(0.0, 1.0, num=N + 1))
         plt.yticks(np.linspace(-2, -1.90, num=N + 1))
         plt.xlabel('x')
         plt.ylabel('y')
         plt.legend()
         plt.grid(True)
-        plt.savefig(f' Euler_N_{N}.png')
+        plt.savefig(f'diff_{N}.png')
+        plt.show()
+    names_methods = ['Точное решение', 'Эйлер', 'Тейлор', 'Адамс']
+    for name in names_methods:
+        plt.figure(figsize=(18, 11))
+        plt.plot(results[10]['x'], results[10][name], label=f'{name} N=10')
+        plt.plot(results[20]['x'], results[20][name], label=f'{name} N=20')
+        plt.plot(results[30]['x'], results[30][name], label=f'{name} N=30')
+        plt.title(f'Метод {name}')
+        plt.xticks(np.linspace(0.0, 1.0, num=20 + 1))
+        plt.yticks(np.linspace(-2, -1.90, num=20 + 1))
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(f'{name}.png')
         plt.show()
