@@ -5,20 +5,28 @@ epsilon = 10 ** -5
 A, B = 0, 1
 
 
+# аналитическое решение
 def analytic_solution(x):
     return np.exp(-x) + np.exp(x) + 3.9 * x ** 2 - 3.9 * x - 2
 
 
+# фи
+def phi(y):
+    return y - np.e - 1 / np.e + 2
+
+
+# Тейлор 3-го порядка
 def get_three_Teylor(x_k, y_k, u_k, h):
     y_next = y_k + h * u_k + h ** 2 / 2 * (y_k + 9.8 + 3.9 * x_k * (1 - x_k)) + h ** 3 / 6 * (
             3.9 - 7.8 * x_k + u_k + u_k)
-    u_next = u_k + h * (y_k + 9.8 + 3.9 * x_k * (1 - x_k)) \
-             + h ** 2 / 2 * (3.9 - 7.8 * x_k + 1 * (y_k + 9.8 + 3.9 * x_k * (1 - x_k))) \
-             + h ** 3 / 6 * (-7.8 + 1 * (3.9 - 7.8 * x_k) + 1 * (y_k + 9.8 + 3.9 * x_k * (1 - x_k)))
+    u_next = u_k + h * (y_k + 9.8 + 3.9 * x_k * (1 - x_k)) + h ** 2 / 2 * (
+            3.9 - 7.8 * x_k + 1 * (y_k + 9.8 + 3.9 * x_k * (1 - x_k))) + h ** 3 / 6 * (
+                     -7.8 + 1 * (3.9 - 7.8 * x_k) + 1 * (y_k + 9.8 + 3.9 * x_k * (1 - x_k)))
     return y_next, u_next
 
 
-def find_y(mu, N, h):
+# Нахождение значений y
+def get_y(mu, N, h):
     y = mu
     u = mu - 3.9
     all_y = [y]
@@ -28,50 +36,57 @@ def find_y(mu, N, h):
     return all_y
 
 
-def phi(y):
-    return y - np.e - 1 / np.e + 2
+# Метод стрельбы
+def get_shooting_method(N, mu, mu_0):
+    step = 1 / N
+    tmp_y = get_y(mu_0, N, step)
+    phi_mu_0 = phi(tmp_y[len(tmp_y) - 1])
+    tmp_y = get_y(mu, N, step)
+    phi_mu = phi(tmp_y[len(tmp_y) - 1])
+    while abs(phi_mu) > epsilon:
+        tmp_y = get_y(mu, N, step)
+        phi_mu = phi(tmp_y[len(tmp_y) - 1])
+        mu = mu - phi_mu / (phi_mu - phi_mu_0) * (mu - mu_0)
+    print(f'Найденное мю = {mu}')
+    return get_y(mu, N, step)
 
 
-def get_hords(mu_0, mu_1):
-    mu_prev = mu_1
-    while True:
-        mu_k = mu_prev - (phi(mu_prev) / (phi(mu_prev) - phi(mu_0))) * (mu_prev - mu_0)
-        if abs(mu_k - mu_prev) < epsilon:
-            break
-        mu_prev = mu_k
-    return mu_k
+def get_lambda(lambda_i):
+    return 1 / (h ** 2 + 2 - lambda_i)
 
 
-def get_lambda(A_i, lambda_i):
-    return 1 / (A_i - lambda_i)
+def get_mu(mu, lambda_i, i, h):
+    return (mu - h ** 2 * (3.9 * h * i * (1 - h * i) + 9.8)) / (2 + h ** 2 - lambda_i)
 
 
-def get_mu():
-    return 1 + 1 / np.e - 2
-
-
-def tridiagonal(h, N):
-    y = np.zeros(N)
-    lambdas = np.zeros(N)
-
-    A_i = np.zeros(N)
-    A_i[0] = 1 + h
-    for n in range(1, N):
-        A_i[n] = 1
-    A_i[N] = 0
-    lambdas[0] = 1 / (1 + h)
-    y[N] = get_mu()
-
-    for i in range(0, N):
-        lambdas[i + 1] = get_lambda(A_i[i], lambdas[i])
-
-    print(y)
-
+# Метод прогонки
+def get_tridiagonal_method(h, N):
+    all_lambda = []
+    all_mu = []
+    lambda_i = -1 / (1 + h)
+    mu = (-3.9 * h) / (1 + h)
+    all_lambda.append(lambda_i)
+    all_mu.append(mu)
+    for i in range(1, N + 1):
+        tmp = lambda_i
+        lambda_i = get_lambda(tmp)
+        mu = get_mu(mu, tmp, i, h)
+        all_lambda.append(lambda_i)
+        all_mu.append(mu)
+    length = len(all_lambda)
+    all_lambda[length - 1] = 0
+    all_mu[length - 1] = np.e + 1 / np.e - 2
+    all_y = []
+    y = np.e + 1 / np.e - 2
+    for k in range(length, 0, -1):
+        y = all_lambda[k - 1] * y + all_mu[k - 1]
+        all_y.append(y)
+    y = list(reversed(all_y))
     return y
 
 
 # Поиск начальных мю: mu_0 и mu_1
-def search_bounds(start=-100):
+def search_bounds(start=-5):
     while phi(start) < 0:
         start += 1
     return start - 1, start
@@ -80,22 +95,23 @@ def search_bounds(start=-100):
 if __name__ == "__main__":
     Nums = [10, 20]
     for N in Nums:
-        h = (B - A) / (N - 1)
+        h = (B - A) / N
         x = np.linspace(0.0, 1.0, num=N + 1)
-
         analytic_solutions = [analytic_solution(x_i) for x_i in x]
-        mu_0, mu_1 = search_bounds(-1)
+        mu_0, mu_1 = search_bounds()
+        print(f'Для N = {N}')
         print(f'mu_0 = {mu_0}; mu_1 = {mu_1}')
-        mu = get_hords(mu_0, mu_1)
-        # mu = 1.0861612696304874
+        print(f'phi(mu_0) = {phi(mu_0)}; phi(mu_1) = {phi(mu_1)}')
 
-        y = find_y(mu, N, h)
-        print(f'mu = {mu}\nphi(mu) = {phi(mu)}')
+        shooting_y = get_shooting_method(N, mu_0, mu_1)
+        tridiagonal_y = get_tridiagonal_method(h, N)
 
-        plt.title(f'N={N}')
-        plt.plot(x, y, label="Shooting method")
-        plt.plot(x, analytic_solutions, label="Reference")
+        plt.title(f'Для разбиения N={N}')
+        plt.plot(x, shooting_y, label="Метод стрельбы")
+        plt.plot(x, analytic_solutions, label="Аналитическое решение")
+        plt.plot(x, tridiagonal_y, label="Метод прогонки")
         plt.xlabel('x')
         plt.ylabel('y')
+        plt.grid(True)
         plt.legend()
         plt.show()
